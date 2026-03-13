@@ -5,6 +5,7 @@
 const fields = {
   jobTitle:   document.getElementById("job-title-input"),
   company:    document.getElementById("company-input"),
+  location:   document.getElementById("location-input"),
   salary:     document.getElementById("salary-input"),
   postedDate: document.getElementById("posted-input"),
   deadline:   document.getElementById("deadline-input"),
@@ -38,6 +39,7 @@ async function init() {
       const d = response.data;
       fields.jobTitle.value   = d.jobTitle   ?? "";
       fields.company.value    = d.company    ?? "";
+      fields.location.value   = d.location   ?? "";
       fields.salary.value     = d.salary     ?? "";
       fields.postedDate.value = d.postedDate ?? "";
       fields.deadline.value   = d.deadline   ?? "";
@@ -58,6 +60,7 @@ btn.addEventListener("click", async () => {
   const data = {
     jobTitle:   fields.jobTitle.value.trim(),
     company:    fields.company.value.trim(),
+    location:   fields.location.value.trim(),
     salary:     fields.salary.value.trim(),
     postedDate: fields.postedDate.value.trim(),
     deadline:   fields.deadline.value.trim(),

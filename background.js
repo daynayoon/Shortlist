@@ -25,7 +25,7 @@ async function getAuthToken(interactive = true) {
 async function ensureHeaderRow(token) {
   const headers = [
     "Date Added", "Job Title", "Company",
-    "Salary", "Posted Date", "Deadline", "URL",
+    "Location", "Salary", "Posted Date", "Deadline",
   ];
 
   // Read first row to check if headers exist
@@ -37,7 +37,8 @@ async function ensureHeaderRow(token) {
   const data = await res.json();
   const existing = data.values?.[0] ?? [];
 
-  if (existing[0] === "Date Added") return; // already set up
+  // Re-run if headers are missing OR structure is outdated (e.g. no Location column)
+  if (JSON.stringify(existing) === JSON.stringify(headers)) return;
 
   // Write header row
   await fetch(
@@ -51,20 +52,88 @@ async function ensureHeaderRow(token) {
       body: JSON.stringify({ values: [headers] }),
     }
   );
+
+  // Get sheet ID for formatting
+  const metaRes = await fetch(
+    `${SHEETS_API}/${CONFIG.SPREADSHEET_ID}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const meta = await metaRes.json();
+  const sheet = meta.sheets?.find(
+    (s) => s.properties.title === CONFIG.SHEET_NAME
+  );
+  if (!sheet) return;
+  const sheetId = sheet.properties.sheetId;
+
+  // Format header row: bold, dark background, white text, freeze row
+  await fetch(
+    `${SHEETS_API}/${CONFIG.SPREADSHEET_ID}:batchUpdate`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            repeatCell: {
+              range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: { red: 0.18, green: 0.20, blue: 0.24 },
+                  textFormat: {
+                    bold: true,
+                    fontSize: 11,
+                    foregroundColor: { red: 1, green: 1, blue: 1 },
+                  },
+                  horizontalAlignment: "CENTER",
+                  verticalAlignment: "MIDDLE",
+                },
+              },
+              fields: "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)",
+            },
+          },
+          {
+            updateSheetProperties: {
+              properties: {
+                sheetId,
+                gridProperties: { frozenRowCount: 1 },
+              },
+              fields: "gridProperties.frozenRowCount",
+            },
+          },
+          {
+            updateDimensionProperties: {
+              range: { sheetId, dimension: "ROWS", startIndex: 0, endIndex: 1 },
+              properties: { pixelSize: 32 },
+              fields: "pixelSize",
+            },
+          },
+        ],
+      }),
+    }
+  );
 }
 
 async function appendToSheet(rowData) {
   const token = await getAuthToken();
   await ensureHeaderRow(token);
 
+  const title = rowData.jobTitle ?? "";
+  const url = rowData.url ?? "";
+  const titleCell = title && url
+    ? `=HYPERLINK("${url.replace(/"/g, '""')}","${title.replace(/"/g, '""')}")`
+    : title || url;
+
   const row = [
     new Date().toISOString().split("T")[0], // Date Added (YYYY-MM-DD)
-    rowData.jobTitle ?? "",
+    titleCell,
     rowData.company ?? "",
+    rowData.location ?? "",
     rowData.salary ?? "",
     rowData.postedDate ?? "",
     rowData.deadline ?? "",
-    rowData.url ?? "",
   ];
 
   const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A:G`);
@@ -80,12 +149,66 @@ async function appendToSheet(rowData) {
     }
   );
 
+  const resJson = await res.json();
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error?.message ?? "Sheets API error");
+    throw new Error(resJson.error?.message ?? "Sheets API error");
   }
 
-  return await res.json();
+  // Get sheet ID for formatting
+  const metaRes = await fetch(
+    `${SHEETS_API}/${CONFIG.SPREADSHEET_ID}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const meta = await metaRes.json();
+  const sheet = meta.sheets?.find((s) => s.properties.title === CONFIG.SHEET_NAME);
+  if (!sheet) return resJson;
+  const sheetId = sheet.properties.sheetId;
+
+  // Parse the updated row index from response (e.g. "Shortlist!A8:G8" → row 8 → index 7)
+  const updatedRange = resJson.updates?.updatedRange ?? "";
+  const rowMatch = updatedRange.match(/!A(\d+)/);
+  const rowIndex = rowMatch ? parseInt(rowMatch[1], 10) - 1 : null;
+
+  const requests = [
+    // Auto-resize all 7 columns to fit content
+    {
+      autoResizeDimensions: {
+        dimensions: { sheetId, dimension: "COLUMNS", startIndex: 0, endIndex: 7 },
+      },
+    },
+  ];
+
+  // Center-align the new data row, white background
+  if (rowIndex !== null) {
+    requests.push({
+      repeatCell: {
+        range: { sheetId, startRowIndex: rowIndex, endRowIndex: rowIndex + 1 },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: { red: 1, green: 1, blue: 1 },
+            textFormat: { foregroundColor: { red: 0, green: 0, blue: 0 }, bold: false },
+            horizontalAlignment: "CENTER",
+            verticalAlignment: "MIDDLE",
+          },
+        },
+        fields: "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)",
+      },
+    });
+  }
+
+  await fetch(
+    `${SHEETS_API}/${CONFIG.SPREADSHEET_ID}:batchUpdate`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ requests }),
+    }
+  );
+
+  return resJson;
 }
 
 // ── Message listener ──────────────────────────────────────────
