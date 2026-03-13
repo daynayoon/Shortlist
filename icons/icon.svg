@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF7BAC"/>
+      <stop offset="100%" style="stop-color:#FFB085"/>
+    </linearGradient>
+    <linearGradient id="bookmark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#FFE8F4;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <!-- rounded square background -->
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <!-- bookmark shape -->
+  <path d="M38 24 H90 C93.3 24 96 26.7 96 30 V104 L64 85 L32 104 V30 C32 26.7 34.7 24 38 24 Z" fill="url(#bookmark)" opacity="0.95"/>
+  <!-- star in center -->
+  <path d="M64 44 L67.5 55 H79 L69.5 61.5 L73 72.5 L64 66 L55 72.5 L58.5 61.5 L49 55 H60.5 Z" fill="#FF7BAC"/>
+  <!-- tiny sparkles -->
+  <circle cx="26" cy="26" r="3" fill="white" opacity="0.7"/>
+  <circle cx="102" cy="20" r="2" fill="white" opacity="0.5"/>
+  <circle cx="108" cy="100" r="2.5" fill="white" opacity="0.4"/>
+</svg>
