@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "Shortlist",
+  "version": "1.0.0",
+  "description": "Save job postings from LinkedIn and UBC Scope to Google Sheets with one click.",
+  "permissions": [
+    "identity",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://www.linkedin.com/jobs/view/*",
+    "https://www.linkedin.com/jobs/search-results/*",
+    "https://www.linkedin.com/jobs/collections/*",
+    "https://scope.sciencecoop.ubc.ca/*",
+    "https://sheets.googleapis.com/*"
+  ],
+  "oauth2": {
+    "client_id": "309154903360-7iigu6cfsk8t4a8fce6g85bt6c4kghgf.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/spreadsheets"
+    ]
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/jobs/view/*",
+        "https://www.linkedin.com/jobs/search-results/*",
+        "https://www.linkedin.com/jobs/collections/*"
+      ],
+      "js": ["content/linkedin.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://scope.sciencecoop.ubc.ca/*"],
+      "js": ["content/scope.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
